@@ -20,7 +20,7 @@ WHEEL = (150, 150, 165)
 GAS_ON, BRAKE_ON = (90, 230, 120), (255, 90, 90)
 
 WHEEL_C, WHEEL_R = np.array([275.0, 118.0]), 42.0
-WHEEL_TURN = np.radians(100)  # wheel rotation at full steer
+WHEEL_TURN = np.radians(60)  # wheel rotation at full steer
 GRIPS = np.radians([150.0, 210.0])  # where the front legs hold the rim at steer 0 (y-up angles)
 GAS_PIVOT, BRAKE_PIVOT = np.array([258.0, FLOOR]), np.array([205.0, FLOOR])
 PEDAL_ARM = 46.0
