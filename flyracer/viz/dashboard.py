@@ -132,6 +132,12 @@ class Dashboard:
         self._text("FRUIT FLY BRAIN LEARNS TO DRIVE", self.font_big, TEXT, (W // 2, 22), "midtop")
         self._text(self.subtitle, self.font_small, MUTED, (W // 2, 70), "midtop")
 
+        # Drop CarRacing's indicator bar (bottom 1/8: score digits, speed, ABS, steering),
+        # then trim the sides to keep the panel's aspect ratio.
+        h, w = frame.shape[:2]
+        h = h * 7 // 8
+        cw = min(w, h * W // GAME_H)
+        frame = frame[:h, (w - cw) // 2:(w + cw) // 2]
         game = pygame.surfarray.make_surface(np.ascontiguousarray(frame.swapaxes(0, 1)))
         s.blit(pygame.transform.smoothscale(game, (W, GAME_H)), (0, HEADER))
         stage = info.get("stage")
