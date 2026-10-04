@@ -1,0 +1,25 @@
+[project]
+name = "fly-racer"
+version = "0.1.0"
+description = "A fruit fly connectome (MaleCNS v1.0) as an RL policy that learns to drive CarRacing-v3"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.4",
+    "gymnasium[box2d]>=1.0",
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "neuprint-python>=0.6",
+    "imageio",
+    "imageio-ffmpeg",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["flyracer*"]
