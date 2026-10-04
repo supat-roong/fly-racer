@@ -34,6 +34,7 @@ class Dashboard:
         self.subtitle = subtitle
         self.max_edges = max_edges
         self.smoothed = np.zeros(n_units, dtype=np.float32)
+        self.wheel = 0.0  # eased steer for the wheel animation; the STEER bar shows the raw action
         self.driver = Driver((DRIVER_W, H - HUD_Y - 10))
 
         if connectome is not None:
@@ -151,7 +152,8 @@ class Dashboard:
         self.draw_brain(rates)
 
         steer, gas, brake = (float(v) for v in action)
-        s.blit(self.driver.render(steer, gas, brake, info.get("t", 0)), (10, HUD_Y + 5))
+        self.wheel = 0.6 * self.wheel + 0.4 * float(np.clip(steer, -1, 1))
+        s.blit(self.driver.render(self.wheel, gas, brake, info.get("t", 0)), (10, HUD_Y + 5))
         y = HUD_Y + 40
         self._bar("STEER", np.clip(steer, -1, 1), y, centered=True, color=(255, 170, 40))
         self._bar("GAS", gas, y + 40, color=(90, 230, 120))
