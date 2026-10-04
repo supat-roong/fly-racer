@@ -1,0 +1,51 @@
+# Tier S: a steering pathway from the MaleCNS v1.0 connectome (neuPrint dataset male-cns:v1.0).
+# Cell type names are regexes matched against the neuPrint `type` property.
+# Verify them in neuPrint Explorer before a long run: the extractor prints how
+# many neurons each pattern matched and warns on zero.
+dataset: male-cns:v1.0
+server: neuprint.janelia.org
+out: data/tier_s.npz
+
+# Visual projection neurons: looming, object and optic-flow channels into the central brain,
+# plus ring neurons carrying visual landmarks into the ellipsoid body (heading compass).
+input_types:
+  - "LPLC2"
+  - "LC4"
+  - "LC9"
+  - "LC11"
+  - "LC12"
+  - "LC15"
+  - "LC16"
+  - "ER[1-6].*"
+
+# Central complex heading/steering circuit.
+core_types:
+  - "EPG"
+  - "PEG"
+  - "PEN_[ab].*"     # named PEN_a(PEN1), PEN_b(PEN2) in male-cns
+  - "PFL[1-3]"
+  - "PFN.*"
+  - "hDeltaB"
+
+# Descending neurons for turning, forward walking and backing up.
+output_types:
+  - "DNa0[1-4]"
+  - "DNb0[5-6]"
+  - "DNg13"
+  - "DNp09"
+  - "MDN"
+
+# Then fill the output group up to max_per_group.output with the descending
+# neurons (this superclass) that receive the most synapses from the selection.
+output_fill_superclass: descending_neuron
+
+# Keep each group within budget (randomly subsample types that match too many cells).
+max_per_group:
+  input: 800
+  output: 120
+
+# Fill the rest of the budget with the neurons that best bridge inputs to outputs
+# (strongest min(synapses in from selection, synapses out to selection)).
+bridge_neurons: 2000
+min_weight: 3   # ignore connections with fewer synapses
+seed: 0

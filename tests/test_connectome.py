@@ -35,3 +35,29 @@ def test_shuffle_signs_keeps_ratio():
     c = small()
     s = shuffle_signs(c, seed=0)
     assert (s.sign < 0).sum() == (c.sign < 0).sum()
+
+
+def test_assemble_from_neuprint_frames():
+    import pandas as pd
+
+    from flyracer.connectome.extract import assemble
+
+    neurons = pd.DataFrame({
+        "bodyId": [10, 20, 30, 40],
+        "type": ["LC4", "EPG", "EPG", "DNa02"],
+        "group": [0, 1, 1, 2],
+        "somaSide": ["L", "R", None, "R"],
+        "somaLocation": [[1, 2, 3], [4, 5, 6], None, [7, 8, 9]],
+        "consensusNt": ["acetylcholine", "gaba", "glutamate", "acetylcholine"],
+    })
+    conns = pd.DataFrame({  # repeated pair = same connection split across ROIs
+        "bodyId_pre": [10, 10, 20, 30, 99, 40],
+        "bodyId_post": [20, 20, 40, 40, 10, 40],
+        "weight": [3, 2, 7, 4, 50, 9],
+    })
+    c = assemble(neurons, conns, {"source": "test"})
+    assert c.n_neurons == 4 and c.n_edges == 3  # unknown body 99 and self-loop dropped
+    assert c.count[(c.pre == 0) & (c.post == 1)].item() == 5
+    assert c.sign.tolist() == [1, -1, -1, 1]
+    assert c.side.tolist() == [-1, 1, 0, 1]
+    assert c.pos[2].tolist() == [4, 5, 6]  # missing soma -> mean of its type
