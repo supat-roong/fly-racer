@@ -18,7 +18,7 @@ from .checkpoint import load_agent, pick_device
 from .envs import make_vec_env
 
 
-def evaluate(agent, episodes: int, seed: int = 10_000, action_repeat: int = 4, num_envs: int = 8) -> list[float]:
+def evaluate(agent, episodes: int, seed: int = 10_000, action_repeat: int = 2, num_envs: int = 8) -> list[float]:
     device = next(agent.parameters()).device
     n = min(num_envs, episodes)
     envs = make_vec_env(n, seed, action_repeat, patience=None, normalize_reward=False)

@@ -79,7 +79,7 @@ def main(argv=None):
     p.add_argument("--max-seconds", type=float, default=20.0, help="cap per clip")
     p.add_argument("--seed", type=int, default=7, help="track seed")
     p.add_argument("--stochastic", action="store_true", help="sample actions instead of using the mean")
-    p.add_argument("--action-repeat", type=int, help="frames per decision (default: the checkpoint's, else 4)")
+    p.add_argument("--action-repeat", type=int, help="frames per decision (default: the checkpoint's; 2 for --untrained)")
     args = p.parse_args(argv)
     if not (args.record or args.live):
         p.error("use --record out.mp4 and/or --live")
@@ -97,7 +97,7 @@ def main(argv=None):
     if args.untrained:
         conn = load_connectome(args.connectome, args.core)
         agent = Agent(args.core, conn, seed=0).eval()
-        clips.append((agent, conn, args.core, 0, "UNTRAINED", args.action_repeat or 4))
+        clips.append((agent, conn, args.core, 0, "UNTRAINED", args.action_repeat or 2))
     for path in args.ckpt:
         agent, conn, ckpt = load_agent(path)
         clips.append((agent, conn, ckpt["args"]["core"], ckpt["args"]["seed"], f"TRAINED {ckpt['step']:,} steps",

@@ -6,9 +6,10 @@
 
 With no --connectome and a connectome core, a synthetic Tier S graph is used.
 
-Recipe: Beta actions, DrAC random-shift regularization, KL early stop, a
-long discount, a learning rate that decays to a floor, and periodic evaluation
-on held-out tracks that keeps the best checkpoint as best.pt.
+Recipe: a decision every 2 frames, Beta actions, DrAC random-shift
+regularization, KL early stop, a long discount, a learning rate that decays to a
+floor, and periodic evaluation on held-out tracks that keeps the best checkpoint
+as best.pt.
 """
 
 from __future__ import annotations
@@ -37,15 +38,17 @@ def parse_args(argv=None):
     p.add_argument("--name", help="run name (default: <core>-<seed>)")
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--device", default="auto", help="auto | mps | cuda | cpu")
-    p.add_argument("--total-steps", type=int, default=1_000_000, help="agent decisions (x action-repeat frames)")
+    p.add_argument("--total-steps", type=int, default=1_500_000, help="agent decisions (x action-repeat frames)")
     p.add_argument("--num-envs", type=int, default=8)
     p.add_argument("--num-steps", type=int, default=128, help="rollout length per env")
-    p.add_argument("--action-repeat", type=int, default=4)
-    p.add_argument("--patience", type=int, default=50, help="end episode after N decisions without progress (0=off)")
+    p.add_argument("--action-repeat", type=int, default=2,
+                   help="frames per decision; 2 (25 decisions/s) steers finely enough to hold speed in corners")
+    p.add_argument("--patience", type=int, default=100,
+                   help="end episode after N decisions (200 frames at repeat 2) without progress (0=off)")
     p.add_argument("--rnn-steps", type=int, default=6, help="FlyRNN Euler steps per frame")
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--lr-floor", type=float, default=0.1, help="LR decays linearly to this fraction of --lr")
-    p.add_argument("--gamma", type=float, default=0.995)
+    p.add_argument("--gamma", type=float, default=0.9975, help="per decision; ~0.995 per 4 frames")
     p.add_argument("--gae-lambda", type=float, default=0.95)
     p.add_argument("--minibatches", type=int, default=8)
     p.add_argument("--epochs", type=int, default=10)
@@ -58,7 +61,7 @@ def parse_args(argv=None):
                    help="DrAC: weight of policy/value consistency under random frame shifts (0=off)")
     p.add_argument("--aug-pad", type=int, default=4, help="max random shift in pixels for DrAC")
     p.add_argument("--save-every", type=int, default=20, help="updates between checkpoints")
-    p.add_argument("--eval-every", type=int, default=50, help="updates between evaluations for best.pt (0=off)")
+    p.add_argument("--eval-every", type=int, default=25, help="updates between evaluations for best.pt (0=off)")
     p.add_argument("--eval-episodes", type=int, default=16, help="full episodes per evaluation")
     return p.parse_args(argv)
 

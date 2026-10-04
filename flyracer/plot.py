@@ -105,7 +105,7 @@ html.static details { display: none; }
 <div class="card">
   <div class="legend" id="legend"></div>
   <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
-  <p class="note">Training episodes end early when the car stalls for 50 decisions, so they score below full evaluation episodes. The dashed line marks 900, the score at which CarRacing counts as solved.</p>
+  <p class="note">Training episodes end early when the car stops reaching new track tiles, so they score below full evaluation episodes. The dashed line marks 900, the score at which CarRacing counts as solved.</p>
   <details><summary>Show data table</summary><div class="tablewrap" id="table"></div></details>
 </div>
 </main>

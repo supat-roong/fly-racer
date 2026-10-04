@@ -55,7 +55,7 @@ class NoProgressTruncation(gym.Wrapper):
         return obs, reward, terminated, truncated, info
 
 
-def make_env(seed: int = 0, action_repeat: int = 4, render_mode: str | None = None,
+def make_env(seed: int = 0, action_repeat: int = 2, render_mode: str | None = None,
              patience: int | None = None, normalize_reward: bool = False):
     def thunk():
         env = gym.make("CarRacing-v3", continuous=True, render_mode=render_mode)
@@ -75,7 +75,7 @@ def make_env(seed: int = 0, action_repeat: int = 4, render_mode: str | None = No
     return thunk
 
 
-def make_vec_env(n: int, seed: int = 0, action_repeat: int = 4, patience: int | None = 50,
+def make_vec_env(n: int, seed: int = 0, action_repeat: int = 2, patience: int | None = 100,
                  normalize_reward: bool = True, asynchronous: bool = True):
     fns = [make_env(seed + i, action_repeat, patience=patience, normalize_reward=normalize_reward)
            for i in range(n)]
