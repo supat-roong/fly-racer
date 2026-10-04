@@ -6,3 +6,4 @@ data/*.npz
 runs/
 *.mp4
 .env
+media/
