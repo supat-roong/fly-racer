@@ -44,11 +44,12 @@ PPO, CleanRL style, with these choices (all defaults in `flyracer/train.py`):
 | Action distribution | Beta per action in [0, 1] | Bounded like the controls, so no probability is wasted on clipped values; far more reliable driving than a clipped Gaussian |
 | Augmentation | DrAC: policy and value agree on frames shifted by up to 4 px (weight 0.1) | The biggest single gain on unseen tracks |
 | Update size | KL early stop at 0.02, 10 epochs, clip 0.2 | Keeps updates from undoing earlier learning |
-| Horizon | Discount 0.995, GAE 0.95 | Values finishing the lap, not just the next tile |
+| Control rate | A decision every 2 frames (25 per second) | Steering finely enough to hold speed through corners; laps get faster without leaving the road |
+| Horizon | Discount 0.9975 per decision (about 0.995 per 4 frames), GAE 0.95 | Values finishing the lap, not just the next tile |
 | Exploration | Entropy bonus 0.005 | Keeps trying faster lines |
 | Learning rate | 3e-4, linear decay to 10% | |
-| Episodes | Action repeat 4, stall early-stop after 50 decisions, reward normalization | Faster, cleaner training signal |
-| Model selection | Evaluate 16 held-out tracks every 50 updates, keep `best.pt` | Scores swing between updates; this keeps the best policy |
+| Episodes | Stall early-stop after 100 decisions (200 frames), reward normalization | Faster, cleaner training signal |
+| Model selection | Evaluate 16 held-out tracks every 25 updates, keep `best.pt` | Scores swing between updates; this keeps the best policy |
 
 ## Setup
 
@@ -85,7 +86,7 @@ It prints how many neurons each cell type pattern matched and writes `data/tier_
 .venv/bin/python -m flyracer.train --core mlp
 ```
 
-Runs write to `runs/<core>-<seed>/`: `progress.csv`, `episodes.csv`, `eval.csv`, checkpoints and `best.pt`. The default 1M decisions (4M game frames) take about 6.5 hours on an M4.
+Runs write to `runs/<core>-<seed>/`: `progress.csv`, `episodes.csv`, `eval.csv`, checkpoints and `best.pt`. The default 1.5M decisions (3M game frames) take about 6 to 8 hours on an M4.
 
 ## Evaluate
 
@@ -117,26 +118,29 @@ Writes a standalone interactive HTML chart (hover for values, data table, light 
 
 ## Results
 
-One `fly` run on the real Tier S graph, seed 1, 1M decisions. The best checkpoint (307k decisions) was picked on the selection tracks, then scored once on held-out tracks.
+One `fly` run on the real Tier S graph, seed 1, 1.5M decisions. The best checkpoint (1.08M decisions) was picked on the selection tracks, then scored once on each set of held-out tracks.
 
 | Tracks | Episodes | Mean score |
 |---|---|---|
-| Selection (seeds 10000+) | 24 | 891.8 +/- 35.8 |
-| Holdout (seeds 20000+) | 24 | 885.5 +/- 39.5 |
-| Holdout (seeds 30000+) | 100 | 891.8 +/- 36.0 |
+| Selection (seeds 10000+) | 24 | 894.4 +/- 52.3 |
+| Holdout (seeds 30000+) | 100 | 903.2 +/- 23.2 |
+| Holdout, tracks 30000 to 30099 one at a time | 100 | 901.4 +/- 40.1 |
+| Holdout, tracks 50000 to 50099 one at a time | 100 | 897.7 +/- 48.5 |
+| All 300 holdout tracks | 300 | 900.8 |
 
-Driving on the 100 tracks 30000 to 30099, one track at a time:
+CarRacing counts as solved at an average of 900 over 100 episodes, which the fly brain clears on unseen tracks.
+
+Driving on tracks 30000 to 30099:
 
 | Metric | Value |
 |---|---|
-| Mean / median score | 896.8 / 908.9 |
-| Laps finished within 20 s | 74 / 100 |
-| Mean score of finished laps | 911.6 |
-| Average lap time | 17.7 s |
-| Track covered | 98.8% |
-| Best lap | track 26, 919.3 in 16.2 s |
+| Median score | 915.5 |
+| Laps finished within 20 s | 73 / 100 |
+| Mean score of finished laps | 917.5 |
+| Average lap time | 16.5 s |
+| Track covered | 98.9% |
 
-What limits the score: an episode ends after 1,000 frames (20 s) and every frame costs 0.1 points, so a finished lap scores about `1000 - 5 x lap seconds`. A 20 second lap scores exactly 900, the "solved" line. The car stays on the road (off-road under 1% of the time); the points it loses come from long tracks it cannot finish in 20 s, timing out with most of the track covered.
+What limits the score: an episode ends after 1,000 frames (20 s) and every frame costs 0.1 points, so a finished lap scores about `1000 - 5 x lap seconds`. A 20 second lap scores exactly 900. The car stays on the road; the points it loses come from long tracks it cannot finish in 20 s, timing out with most of the track covered.
 
 ![Training curve](docs/training_curve.png)
 
