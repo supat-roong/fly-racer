@@ -1,25 +1,21 @@
-# fly-racer
+# Fly-Racer
 
 A fruit fly brain learns to drive. The policy network is wired like a real fly's nervous system, taken from the MaleCNS v1.0 connectome (Janelia, Google Research, Cambridge; 166k+ neurons, brain plus nerve cord), and trained with PPO on Gymnasium `CarRacing-v3`. Everything runs locally on an Apple Silicon Mac.
 
+![Fly racer demo](docs/demo.gif)
+
 ## Architecture
 
-```
-CarRacing-v3 frame (96x96 gray, 4 stacked)
-        |
-        v
-  CNN encoder ("retina")          256 visual features
-        |
-        v
-  input neurons  (visual projection neurons, ring neurons)
-        |
-  FlyRNN core    (central complex + bridging neurons, recurrent)
-        |          wiring = connectome, signs = neurotransmitter (Dale's law)
-        v
-  output neurons (descending neurons: turning, forward, backward)
-        |
-        v
-  Beta readout -> steer, gas, brake        critic: MLP on CNN features
+```mermaid
+flowchart TD
+    A["CarRacing-v3 frame<br/>96x96 gray, 4 stacked"] --> B["CNN encoder (retina)<br/>256 visual features"]
+    B --> C["Input neurons<br/>visual projection neurons, ring neurons"]
+    C --> D["FlyRNN core<br/>central complex + bridging neurons, recurrent<br/><i>wiring = connectome, signs = neurotransmitter (Dale's law)</i>"]
+    D --> E["Output neurons<br/>descending neurons: turning, forward, backward"]
+    E --> F["Beta readout"]
+    F --> G["steer, gas, brake"]
+    B --> H["Critic<br/>MLP on CNN features"]
+    H --> V["state value V(s)<br/><i>training only</i>"]
 ```
 
 Each neuron is a leaky rate unit, `v <- v + (dt/tau)(-v + W r + b + I)`, `r = tanh(relu(v))`. Per game frame the network settles for 6 steps from rest. Only real connectome edges exist and each keeps its presynaptic neuron's sign; training adjusts synapse strengths, time constants, biases and the visual input projection. The readout starts with a steering prior: right-side descending neurons steer right, left-side ones steer left.
@@ -106,6 +102,8 @@ Full episodes, deterministic actions, on tracks never used in training.
 .venv/bin/python -m flyracer.watch --ckpt runs/fly-1/best.pt --record fly.mp4 --seed 26 --max-seconds 60
 # learning progress montage, one clip per checkpoint
 .venv/bin/python -m flyracer.watch --ckpt runs/fly-1/ckpt_*.pt --record progress.mp4 --max-seconds 8
+# race up to four checkpoints side by side on the same track
+.venv/bin/python -m flyracer.race --ckpt runs/fly-1/best.pt runs/random-1/best.pt runs/signs-1/best.pt runs/mlp-1/best.pt --seed 30037 --record race.mp4
 ```
 
 ## Plot training curves
@@ -118,42 +116,33 @@ Writes a standalone interactive HTML chart (hover for values, data table, light 
 
 ## Results
 
-One `fly` run on the real Tier S graph, seed 1, 1.5M decisions. The best checkpoint (1.08M decisions) was picked on the selection tracks, then scored once on each set of held-out tracks.
+![Training curves of all four cores](docs/core_comparison.png)
 
-| Tracks | Episodes | Mean score |
-|---|---|---|
-| Selection (seeds 10000+) | 24 | 894.4 +/- 52.3 |
-| Holdout (seeds 30000+) | 100 | 903.2 +/- 23.2 |
-| Holdout, tracks 30000 to 30099 one at a time | 100 | 901.4 +/- 40.1 |
-| Holdout, tracks 50000 to 50099 one at a time | 100 | 897.7 +/- 48.5 |
-| All 300 holdout tracks | 300 | 900.8 |
+All four cores trained with the same recipe, one seed each. Lines show the rolling mean of 20 training episodes; dots are single episodes. Training episodes stop early when the car stalls, so they score below full evaluation episodes.
 
-CarRacing counts as solved at an average of 900 over 100 episodes, which the fly brain clears on unseen tracks.
+- **`fly`** learns fastest. It passes 800 within about 300 episodes and stays near there for the rest of training.
+- **`signs`** (real wiring, shuffled excitatory/inhibitory labels) follows close behind but swings more in the first 1,000 episodes.
+- **`random`** (shuffled wiring) starts slowest. It sits in the 100 to 400 range for the first 500 episodes and reaches the `fly` level only around episode 1,000.
+- **`mlp`** (no connectome) is the least stable. It jumps to about 700 early, then collapses several times, falling as low as 100, and settles only after about 2,000 episodes.
 
-Driving on tracks 30000 to 30099:
+By the end of training, all four score between 813 and 865, with `mlp` slightly ahead.
 
-| Metric | Value |
-|---|---|
-| Median score | 915.5 |
-| Laps finished within 20 s | 73 / 100 |
-| Mean score of finished laps | 917.5 |
-| Average lap time | 16.5 s |
-| Track covered | 98.9% |
 
-What limits the score: an episode ends after 1,000 frames (20 s) and every frame costs 0.1 points, so a finished lap scores about `1000 - 5 x lap seconds`. A 20 second lap scores exactly 900. The car stays on the road; the points it loses come from long tracks it cannot finish in 20 s, timing out with most of the track covered.
+![Four cores racing comparison](docs/core_comparison.gif)
 
-![Training curve](docs/training_curve.png)
 
-## Layout
+Each core's `best.pt`, scored on 100 full episodes on tracks never used in training (deterministic actions):
 
-| Path | Contents |
-|---|---|
-| `flyracer/connectome/` | File format, neuPrint extractor, synthetic graph, shuffle controls |
-| `flyracer/models/` | FlyRNN and the actor-critic with the four cores |
-| `flyracer/envs.py` | CarRacing wrappers |
-| `flyracer/augment.py` | Random-shift augmentation for DrAC |
-| `flyracer/train.py` | PPO trainer |
-| `flyracer/evaluate.py`, `flyracer/checkpoint.py` | Evaluation on held-out tracks, checkpoint loading |
-| `flyracer/viz/`, `flyracer/watch.py` | Reel dashboard, fly driver, live viewer, MP4 recorder |
-| `flyracer/plot.py` | Training curve chart (HTML, PNG) |
-| `configs/tier_s.yaml` | Tier S cell type selection |
+| Core | Mean score | Median | Worst episode | Episodes at 900+ |
+|---|---|---|---|---|
+| `fly` | **903.2 +/- 23.2** | 912.7 | **796.3** | 66 / 100 |
+| `signs` | 896.9 +/- 28.2 | 904.0 | 745.0 | 57 / 100 |
+| `mlp` | 894.0 +/- 75.9 | 911.1 | 351.2 | 63 / 100 |
+| `random` | 883.7 +/- 82.0 | 909.7 | 430.9 | 63 / 100 |
+
+CarRacing counts as solved at an average of 900 over 100 episodes; only `fly` clears it. Medians are close across all four, so the gap comes from bad episodes: `random` and `mlp` occasionally crash a track, while `fly` never drops below 796. On this evidence the fly's wiring makes learning faster and driving more consistent, though with one seed per core the differences in mean are small.
+
+
+## License
+
+The code is released under the [MIT License](LICENSE). The MaleCNS connectome is not included in this repository; it is downloaded from neuPrint and remains under its providers' terms.
