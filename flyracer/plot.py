@@ -37,10 +37,7 @@ def load_run(run_dir: Path) -> dict:
                     by_ep[int(r["episodes"])] = float(r["return_mean"])
         mean = [[e, round(v, 1)] for e, v in sorted(by_ep.items())]
     args = json.loads((run_dir / "args.json").read_text())
-    conn = args.get("connectome")
-    label = f"{run_dir.name} ({args['core']}, {'real MaleCNS' if conn else 'synthetic'} wiring)" \
-        if args["core"] != "mlp" else f"{run_dir.name} (mlp)"
-    return {"name": run_dir.name, "label": label, "mean": mean, "raw": [[e, round(s, 1)] for e, s in raw]}
+    return {"name": run_dir.name, "core": args["core"], "mean": mean, "raw": [[e, round(s, 1)] for e, s in raw]}
 
 
 PAGE = r"""<!doctype html>
@@ -232,6 +229,9 @@ def main(argv=None):
     if len(args.runs) > 4:
         p.error("at most 4 runs per chart")
     runs = [load_run(Path(r)) for r in args.runs]
+    cores = [r["core"] for r in runs]
+    for r in runs:  # label by core; fall back to the run name when two runs share a core
+        r["label"] = r["name"] = r["core"] if cores.count(r["core"]) == 1 else r["name"]
     Path(args.out).write_text(PAGE.replace("__DATA__", json.dumps(runs)))
     print(f"saved {args.out}")
     if args.png:
