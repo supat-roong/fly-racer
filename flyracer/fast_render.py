@@ -35,7 +35,6 @@ class FastCarRacing(cr.CarRacing):
     its frames, and drawing has no effect on the physics or the score."""
 
     _GRASS = _grass_polys()
-    _font = None
     skip_render = False
 
     def reset(self, *args, **kwargs):
@@ -92,27 +91,23 @@ class FastCarRacing(cr.CarRacing):
             self._draw_batch(road, colors, zoom, translation, angle)
 
     def _render(self, mode: str):
-        # Stock _render, except the font is loaded once instead of every frame.
-        if mode != "state_pixels" or "t" not in self.__dict__:
-            return super()._render(mode)
-        if self.skip_render:
+        # The installed gymnasium's own _render (versions differ in how they draw the
+        # score bar), with the font loaded once instead of from disk every frame.
+        if self.skip_render and mode == "state_pixels" and "t" in self.__dict__:
             return self.state
-        pygame.font.init()
-        self.surf = pygame.Surface((cr.WINDOW_W, cr.WINDOW_H))
-        angle = -self.car.hull.angle
-        zoom = 0.1 * cr.SCALE * max(1 - self.t, 0) + cr.ZOOM * cr.SCALE * min(self.t, 1)
-        scroll_x = -(self.car.hull.position[0]) * zoom
-        scroll_y = -(self.car.hull.position[1]) * zoom
-        trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
-        trans = (cr.WINDOW_W / 2 + trans[0], cr.WINDOW_H / 4 + trans[1])
-        self._render_road(zoom, trans, angle)
-        self.car.draw(self.surf, zoom, trans, angle, False)
-        self.surf = pygame.transform.flip(self.surf, False, True)
-        self._render_indicators(cr.WINDOW_W, cr.WINDOW_H)
-        if FastCarRacing._font is None:
-            FastCarRacing._font = pygame.font.Font(pygame.font.get_default_font(), 42)
-        text = FastCarRacing._font.render(f"{self.reward:04.0f}", True, (255, 255, 255), (0, 0, 0))
-        text_rect = text.get_rect()
-        text_rect.center = (60, cr.WINDOW_H - cr.WINDOW_H * 2.5 / 40.0)
-        self.surf.blit(text, text_rect)
-        return self._create_image_array(self.surf, (cr.STATE_W, cr.STATE_H))
+        font_cls = pygame.font.Font
+        pygame.font.Font = _cached_font
+        try:
+            return super()._render(mode)
+        finally:
+            pygame.font.Font = font_cls
+
+
+_fonts: dict = {}
+_Font = pygame.font.Font
+
+
+def _cached_font(*args):
+    if args not in _fonts:
+        _fonts[args] = _Font(*args)
+    return _fonts[args]
