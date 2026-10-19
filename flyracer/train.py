@@ -23,6 +23,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
+from torch.distributions import Beta
 
 from .augment import random_shift
 from .checkpoint import load_connectome, pick_device, save_checkpoint
@@ -177,7 +178,16 @@ def main(argv=None):
         for _ in range(args.epochs):
             epochs_run += 1
             for mb in torch.randperm(batch, device=device).split(mb_size):
-                _, logp, ent, value, _ = agent(b_obs[mb], action=b_act[mb])
+                m = len(mb)
+                obs_mb = b_obs[mb]
+                if args.drac_coef:
+                    # Real and shifted frames in one pass (DrAC terms below).
+                    obs_mb = torch.cat([obs_mb.float(), random_shift(obs_mb, args.aug_pad)])
+                alpha, beta, value_all, _ = agent.dist_value(obs_mb)
+                dist = Beta(alpha[:m], beta[:m])
+                value = value_all[:m]
+                logp = dist.log_prob(b_act[mb].clamp(1e-6, 1 - 1e-6)).sum(-1)
+                ent = dist.entropy().sum(-1)
                 ratio = (logp - b_logp[mb]).exp()
                 mb_adv = (b_adv[mb] - b_adv[mb].mean()) / (b_adv[mb].std() + 1e-8)
                 pg_loss = torch.max(-mb_adv * ratio, -mb_adv * ratio.clamp(1 - args.clip, 1 + args.clip)).mean()
@@ -186,12 +196,12 @@ def main(argv=None):
                 loss = pg_loss - args.ent_coef * ent.mean() + args.vf_coef * v_loss
                 if args.drac_coef:
                     # DrAC (Raileanu et al. 2021): the PPO loss stays on real frames; these terms
-                    # make the policy and value agree on randomly shifted copies of them.
+                    # make the policy and value agree on randomly shifted copies of them. The
+                    # target actions are sampled from the (detached) policy on the real frames.
                     with torch.no_grad():
-                        target_act, *_ = agent(b_obs[mb])
-                    aug = random_shift(b_obs[mb], args.aug_pad)
-                    _, logp_aug, _, value_aug, _ = agent(aug, action=target_act)
-                    drac = -logp_aug.mean() + ((value_aug - value.detach()) ** 2).mean()
+                        target_act = Beta(alpha[:m].detach(), beta[:m].detach()).sample()
+                    logp_aug = Beta(alpha[m:], beta[m:]).log_prob(target_act.clamp(1e-6, 1 - 1e-6)).sum(-1)
+                    drac = -logp_aug.mean() + ((value_all[m:] - value.detach()) ** 2).mean()
                     loss = loss + args.drac_coef * drac
                 opt.zero_grad()
                 loss.backward()

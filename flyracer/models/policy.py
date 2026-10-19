@@ -122,13 +122,18 @@ class Agent(nn.Module):
     def value(self, obs):
         return self.critic(self.features(obs)).squeeze(-1)
 
-    def forward(self, obs, action=None, deterministic=False):
-        """Returns action in [0, 1], log_prob, entropy, value, all neuron rates."""
+    def dist_value(self, obs):
+        """Beta parameters (alpha, beta) per action and the state value, one pass over obs."""
         f = self.features(obs)
         out, rates = self.core(f)
         a, b = (nn.functional.softplus(x) + 1.0 for x in self.head(out).split(ACTIONS, dim=-1))
+        return a, b, self.critic(f).squeeze(-1), rates
+
+    def forward(self, obs, action=None, deterministic=False):
+        """Returns action in [0, 1], log_prob, entropy, value, all neuron rates."""
+        a, b, value, rates = self.dist_value(obs)
         dist = Beta(a, b)
         if action is None:
             action = a / (a + b) if deterministic else dist.sample()
         logp = dist.log_prob(action.clamp(1e-6, 1 - 1e-6)).sum(-1)
-        return action, logp, dist.entropy().sum(-1), self.critic(f).squeeze(-1), rates
+        return action, logp, dist.entropy().sum(-1), value, rates
