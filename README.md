@@ -84,6 +84,27 @@ It prints how many neurons each cell type pattern matched and writes `data/tier_
 
 Runs write to `runs/<core>-<seed>/`: `progress.csv`, `episodes.csv`, `eval.csv`, checkpoints and `best.pt`. The default 1.5M decisions (3M game frames) take about 6 to 8 hours on an M4.
 
+`--max-hours` saves the full training state to `resume.pt` and stops; `--resume` continues from it.
+
+### On a Kaggle GPU
+
+```bash
+python tools/kaggle/push.py --user <kaggle-user> --name fly-1 --args "--core fly --seed 1"
+kaggle kernels output <kaggle-user>/fly-racer-train -p runs/kaggle   # when it finishes
+```
+
+This uploads the committed code and `data/tier_s.npz` as a private dataset and starts a T4 notebook. A run that hits Kaggle's 12 hour limit continues with `--resume runs/<name>`.
+
+Most of a CarRacing step is drawing the frame, so the environment is the bottleneck on Kaggle's 4 CPUs. `flyracer/fast_render.py` draws the same frames faster: polygon culling in numpy, a cached font, and no drawing of the repeated frame the agent never sees. A test checks its frames, rewards and episode ends against stock `CarRacing-v3`, and the notebook runs it before training.
+
+| Measured on Kaggle (T4, 4 vCPUs) | Stock | This repo |
+|---|---|---|
+| Environment, 8 envs | 96 decisions/s | 281 decisions/s |
+| PPO minibatch update | 55 ms | 41 ms |
+| Full training run | about 66 decisions/s (estimated from the two rows above) | 129 decisions/s (1.5M in 3.2 hours) |
+
+The Kaggle run `fly` seed 1 scored 888.8 +/- 26.4 on 100 held-out tracks (median 888.9, worst 744.4, 30 at 900+).
+
 ## Evaluate
 
 ```bash
