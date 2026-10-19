@@ -7,3 +7,4 @@ runs/
 *.mp4
 .env
 media/
+*.egg-info/
