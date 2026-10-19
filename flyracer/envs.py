@@ -5,12 +5,19 @@ from __future__ import annotations
 import gymnasium as gym
 import numpy as np
 
+from .fast_render import FastCarRacing
+
+# CarRacing-v3 with the faster renderer (same observations), same limits as the stock spec.
+gym.register("FastCarRacing-v3", entry_point=FastCarRacing, max_episode_steps=1000, reward_threshold=900)
+
 
 class ActionRepeat(gym.Wrapper):
     """Repeat each action `k` frames and sum rewards (the car barely moves in one frame).
 
     With an rgb_array render mode, every intermediate frame is kept in `frames`
     so a viewer can show smooth 50 fps video instead of every k-th frame.
+    Otherwise, on FastCarRacing, only the observation the agent sees (the last
+    frame) is drawn.
     """
 
     def __init__(self, env, k: int):
@@ -21,13 +28,20 @@ class ActionRepeat(gym.Wrapper):
     def step(self, action):
         total = 0.0
         self.frames = []
-        for _ in range(self.k):
+        base = self.env.unwrapped
+        skip = isinstance(base, FastCarRacing) and self.env.render_mode is None
+        for i in range(self.k):
+            if skip:
+                base.skip_render = i < self.k - 1
             obs, reward, terminated, truncated, info = self.env.step(action)
             total += reward
             if self.env.render_mode == "rgb_array":
                 self.frames.append(self.env.render())
             if terminated or truncated:
                 break
+        if skip and base.skip_render:  # ended on a frame that was not drawn
+            base.skip_render = False
+            obs = base.render_state()
         return obs, total, terminated, truncated, info
 
 
@@ -56,9 +70,9 @@ class NoProgressTruncation(gym.Wrapper):
 
 
 def make_env(seed: int = 0, action_repeat: int = 2, render_mode: str | None = None,
-             patience: int | None = None, normalize_reward: bool = False):
+             patience: int | None = None, normalize_reward: bool = False, fast: bool = True):
     def thunk():
-        env = gym.make("CarRacing-v3", continuous=True, render_mode=render_mode)
+        env = gym.make("FastCarRacing-v3" if fast else "CarRacing-v3", continuous=True, render_mode=render_mode)
         env = ActionRepeat(env, action_repeat)
         if patience:
             env = NoProgressTruncation(env, patience)
