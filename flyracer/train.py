@@ -63,6 +63,10 @@ def parse_args(argv=None):
     p.add_argument("--save-every", type=int, default=20, help="updates between checkpoints")
     p.add_argument("--eval-every", type=int, default=25, help="updates between evaluations for best.pt (0=off)")
     p.add_argument("--eval-episodes", type=int, default=16, help="full episodes per evaluation")
+    p.add_argument("--resume", action="store_true",
+                   help="continue runs/<name>/resume.pt (agent, optimizer, counters, best score)")
+    p.add_argument("--max-hours", type=float, default=0,
+                   help="save resume.pt and stop after this many hours (0=off), e.g. under a session limit")
     return p.parse_args(argv)
 
 
@@ -71,7 +75,11 @@ def main(argv=None):
     name = args.name or f"{args.core}-{args.seed}"
     run_dir = Path("runs") / name
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "args.json").write_text(json.dumps(vars(args), indent=2))
+    state = None
+    if args.resume and (run_dir / "resume.pt").exists():
+        state = torch.load(run_dir / "resume.pt", map_location="cpu", weights_only=False)
+    else:
+        (run_dir / "args.json").write_text(json.dumps(vars(args), indent=2))
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -85,6 +93,14 @@ def main(argv=None):
     n_params = sum(p.numel() for p in agent.parameters() if p.requires_grad)
     print(f"core={args.core} device={device} trainable params={n_params:,}")
     opt = torch.optim.Adam(agent.parameters(), lr=args.lr, eps=1e-5)
+    first_update, step, recent, best_score = 1, 0, [], -float("inf")
+    if state is not None:
+        agent.load_state_dict(state["state_dict"])
+        opt.load_state_dict(state["opt"])
+        first_update, step, recent, best_score = state["update"] + 1, state["step"], state["recent"], state["best"]
+        torch.set_rng_state(state["torch_rng"])
+        np.random.set_state(state["np_rng"])
+        print(f"resumed {run_dir} at update {first_update} step {step}")
 
     T, N = args.num_steps, args.num_envs
     obs_buf = torch.zeros((T, N, 4, 96, 96), dtype=torch.uint8, device=device)
@@ -96,23 +112,25 @@ def main(argv=None):
     batch = T * N
     mb_size = batch // args.minibatches
     n_updates = args.total_steps // batch
-    log_f = open(run_dir / "progress.csv", "w", newline="")
+    mode = "a" if state is not None else "w"
+    log_f = open(run_dir / "progress.csv", mode, newline="")
     log = csv.writer(log_f)
-    log.writerow(["update", "step", "frames", "return_mean", "return_max", "episodes", "sps",
-                  "pg_loss", "v_loss", "entropy", "approx_kl"])
-    ep_f = open(run_dir / "episodes.csv", "w", newline="")
+    ep_f = open(run_dir / "episodes.csv", mode, newline="")
     ep_log = csv.writer(ep_f)
-    ep_log.writerow(["episode", "step", "score"])
     # Periodic evaluation on held-out tracks keeps the best checkpoint even if PPO later drifts.
-    eval_f = open(run_dir / "eval.csv", "w", newline="")
+    eval_f = open(run_dir / "eval.csv", mode, newline="")
     eval_log = csv.writer(eval_f)
-    eval_log.writerow(["update", "step", "score_mean", "score_std"])
-    best_score = -float("inf")
+    if state is None:
+        log.writerow(["update", "step", "frames", "return_mean", "return_max", "episodes", "sps",
+                      "pg_loss", "v_loss", "entropy", "approx_kl"])
+        ep_log.writerow(["episode", "step", "score"])
+        eval_log.writerow(["update", "step", "score_mean", "score_std"])
 
-    obs, _ = envs.reset(seed=args.seed)
+    # A resumed run starts fresh episodes (env state is not saved), on new tracks.
+    obs, _ = envs.reset(seed=args.seed + step)
     obs = torch.as_tensor(obs, device=device)
-    step, recent, start = 0, [], time.time()
-    for update in range(1, n_updates + 1):
+    start, start_step = time.time(), step
+    for update in range(first_update, n_updates + 1):
         for g in opt.param_groups:
             frac = 1 - (update - 1) / n_updates
             g["lr"] = args.lr * (args.lr_floor + (1 - args.lr_floor) * frac)
@@ -184,7 +202,7 @@ def main(argv=None):
             if args.target_kl and approx_kl > args.target_kl:
                 break  # policy moved far enough from the one that collected this data
 
-        sps = step / (time.time() - start)
+        sps = (step - start_step) / (time.time() - start)
         r_mean = float(np.mean(recent[-20:])) if recent else float("nan")
         r_max = float(np.max(recent)) if recent else float("nan")
         log.writerow([update, step, step * args.action_repeat, f"{r_mean:.1f}", f"{r_max:.1f}", len(recent),
@@ -213,6 +231,12 @@ def main(argv=None):
                 best_score, tag = score, "  new best -> best.pt"
                 save_checkpoint(run_dir / "best.pt", agent, args, step, args.connectome)
             print(f"eval step {step}: {score:.1f} +/- {np.std(scores):.1f}{tag}")
+        if args.max_hours and time.time() - start > args.max_hours * 3600 and update < n_updates:
+            torch.save({"state_dict": agent.state_dict(), "opt": opt.state_dict(), "update": update, "step": step,
+                        "recent": recent, "best": best_score, "torch_rng": torch.get_rng_state(),
+                        "np_rng": np.random.get_state()}, run_dir / "resume.pt")
+            print(f"--max-hours reached: saved {run_dir / 'resume.pt'}, rerun with --resume")
+            break
 
     envs.close()
     log_f.close()
