@@ -88,13 +88,13 @@ Runs write to `runs/<core>-<seed>/`: `progress.csv`, `episodes.csv`, `eval.csv`,
 
 ### On a Kaggle GPU
 
-Demo notebook: [kaggle.com/code/supatroongpraiwan/fly-racer-train](https://www.kaggle.com/code/supatroongpraiwan/fly-racer-train). It clones this repo, installs Box2D, checks the fast renderer, trains on a T4 and plots the held-out scores.
+Demo notebook: [kaggle.com/code/supatroongpraiwan/fly-racer-train](https://www.kaggle.com/code/supatroongpraiwan/fly-racer-train). It clones this repo, installs Box2D, checks the fast renderer, trains on a GPU and plots the held-out scores.
 
 The connectome is not included, because neuPrint requires a login. To run the notebook yourself:
 
 1. Extract `data/tier_s.npz` as in [Get the connectome](#get-the-connectome-tier-s).
 2. Upload it to Kaggle as a private dataset (Datasets, New Dataset). Upload the `.npz` file as it is.
-3. Open the demo notebook and click Copy & Edit. In the side panel, use Add Input to attach your dataset, set Accelerator to GPU T4, and turn Internet on. Kaggle allows GPU and Internet only on phone-verified accounts.
+3. Open the demo notebook and click Copy & Edit. In the side panel, use Add Input to attach your dataset, set Accelerator to GPU T4 x2, and turn Internet on. Kaggle allows GPU and Internet only on phone-verified accounts.
 4. Change the settings cell if you want (run name, `flyracer.train` arguments), then Save Version, Save & Run All.
 
 The output keeps `runs/<name>/` with `best.pt`, checkpoints and logs.
@@ -109,13 +109,7 @@ kaggle kernels output <kaggle-user>/fly-racer-train -p runs/kaggle   # when it f
 
 The first push uploads `data/tier_s.npz` to your private dataset `<kaggle-user>/fly-racer-connectome`. Every push publishes the notebook `<kaggle-user>/fly-racer-train`, built from [tools/kaggle/train_notebook.py](tools/kaggle/train_notebook.py), and starts a run. Add `--private` to keep the notebook private. Kaggle stops a session after 12 hours, so training saves `resume.pt` at 11 hours. Continue the run with `--resume runs/<name>`, which uploads the run folder as the private dataset `<kaggle-user>/fly-racer-runs`.
 
-Most of a CarRacing step is drawing the frame, so the environment is the bottleneck on Kaggle's 4 CPUs. `flyracer/fast_render.py` draws the same frames faster: polygon culling in numpy, a cached font, and no drawing of the repeated frame the agent never sees. A test checks its frames, rewards and episode ends against stock `CarRacing-v3`, and the notebook runs it before training.
-
-| Measured on Kaggle (T4, 4 vCPUs) | Stock | This repo |
-|---|---|---|
-| Environment, 8 envs | 96 decisions/s | 281 decisions/s |
-| PPO minibatch update | 55 ms | 41 ms |
-| Full training run | about 66 decisions/s (estimated from the two rows above) | 129 decisions/s (1.5M in 3.2 hours) |
+Runs on Kaggle's GPU T4 x2 (4 vCPUs). Training uses one of the two GPUs, and the default 1.5M decisions take about 3.2 hours.
 
 The Kaggle run `fly` seed 1 scored 888.8 +/- 26.4 on 100 held-out tracks (median 888.9, worst 744.4, 30 at 900+).
 

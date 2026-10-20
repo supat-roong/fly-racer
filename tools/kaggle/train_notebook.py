@@ -10,10 +10,10 @@
 #    Extract it on your machine (README, "Get the connectome") and upload `data/tier_s.npz`
 #    as a private Kaggle dataset.
 # 2. Copy this notebook, then in the side panel: **Add Input** your connectome dataset,
-#    set **Accelerator** to GPU T4, and turn **Internet** on (phone-verified account needed).
+#    set **Accelerator** to GPU T4 x2, and turn **Internet** on (phone-verified account needed).
 # 3. Edit the settings below if you like, then **Save Version → Save & Run All**.
 #
-# The default run (1.5M decisions) takes about 3.2 hours on a T4. Results land in the
+# The default run (1.5M decisions) takes about 3.2 hours on Kaggle's GPU T4 x2. Results land in the
 # notebook output under `runs/<name>/`, with the best policy in `best.pt`.
 
 # %%
