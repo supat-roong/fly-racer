@@ -61,8 +61,10 @@ if not found:
         "No tier_s.npz under /kaggle/input. Extract the connectome with flyracer.connectome.extract, "
         "upload it as a private dataset, and attach it with Add Input."
     )
-CONNECTOME = found[0]
-print("connectome:", CONNECTOME)
+os.makedirs(f"{CODE}/data", exist_ok=True)
+shutil.copy(found[0], f"{CODE}/data/tier_s.npz")
+CONNECTOME = "data/tier_s.npz"  # relative, as in a local run, so checkpoints load on any machine
+print("connectome:", found[0])
 
 # %% [markdown]
 # ## 3. Install
