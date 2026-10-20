@@ -39,7 +39,10 @@ def save_checkpoint(path: Path, agent: Agent, args, step: int, connectome_path: 
 def load_agent(ckpt_path: str | Path, device="cpu") -> tuple[Agent, Connectome | None, dict]:
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     args = ckpt["args"]
-    conn = load_connectome(ckpt["connectome"], args["core"])
+    path = ckpt["connectome"]
+    if path and not Path(path).exists() and Path("data", Path(path).name).exists():
+        path = str(Path("data", Path(path).name))  # trained elsewhere, e.g. /kaggle/input/...
+    conn = load_connectome(path, args["core"])
     agent = Agent(args["core"], conn, steps=args["rnn_steps"], seed=args["seed"]).to(device)
     agent.load_state_dict(ckpt["state_dict"])
     agent.eval()
