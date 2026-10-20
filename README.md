@@ -109,7 +109,7 @@ kaggle kernels output <kaggle-user>/fly-racer-train -p runs/kaggle   # when it f
 
 The first push uploads `data/tier_s.npz` to your private dataset `<kaggle-user>/fly-racer-connectome`. Every push publishes the notebook `<kaggle-user>/fly-racer-train`, built from [tools/kaggle/train_notebook.py](tools/kaggle/train_notebook.py), and starts a run. Add `--private` to keep the notebook private. Kaggle stops a session after 12 hours, so training saves `resume.pt` at 11 hours. Continue the run with `--resume runs/<name>`, which uploads the run folder as the private dataset `<kaggle-user>/fly-racer-runs`.
 
-Runs on Kaggle's GPU T4 x2 (4 vCPUs). Training uses one of the two GPUs, and the default 1.5M decisions take about 3.2 hours.
+Runs on Kaggle's GPU T4 x2 (4 vCPUs). The default 1.5M decisions take about 3.2 hours.
 
 The Kaggle run `fly` seed 1 scored 888.8 +/- 26.4 on 100 held-out tracks (median 888.9, worst 744.4, 30 at 900+).
 
