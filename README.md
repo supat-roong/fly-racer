@@ -88,7 +88,7 @@ Runs write to `runs/<core>-<seed>/`: `progress.csv`, `episodes.csv`, `eval.csv`,
 
 ### On a Kaggle GPU
 
-Demo notebook: [kaggle.com/code/supatroongpraiwan/fly-racer-train](https://www.kaggle.com/code/supatroongpraiwan/fly-racer-train). It clones this repo, installs Box2D, checks the fast renderer, trains on a GPU and plots the held-out scores.
+Demo notebook: [Fly-Racer: Fruit Fly Connectome Drives a Race Car](https://www.kaggle.com/code/supatroongpraiwan/fly-racer-fruit-fly-connectome-drives-a-race-car). It clones this repo, installs Box2D, checks the fast renderer, trains on a GPU and plots the held-out scores.
 
 The connectome is not included, because neuPrint requires a login. To run the notebook yourself:
 
@@ -104,10 +104,10 @@ Or start it from the command line, with the [kaggle CLI](https://github.com/Kagg
 ```bash
 git push   # the notebook clones the current commit from GitHub
 python tools/kaggle/push.py --user <kaggle-user> --name fly-1 --args "--core fly --seed 1"
-kaggle kernels output <kaggle-user>/fly-racer-train -p runs/kaggle   # when it finishes
+kaggle kernels output <kaggle-user>/fly-racer-fruit-fly-connectome-drives-a-race-car -p runs/kaggle   # when it finishes
 ```
 
-The first push uploads `data/tier_s.npz` to your private dataset `<kaggle-user>/fly-racer-connectome`. Every push publishes the notebook `<kaggle-user>/fly-racer-train`, built from [tools/kaggle/train_notebook.py](tools/kaggle/train_notebook.py), and starts a run. Add `--private` to keep the notebook private. Kaggle stops a session after 12 hours, so training saves `resume.pt` at 11 hours. Continue the run with `--resume runs/<name>`, which uploads the run folder as the private dataset `<kaggle-user>/fly-racer-runs`.
+The first push uploads `data/tier_s.npz` to your private dataset `<kaggle-user>/fly-racer-connectome`. Every push publishes the notebook `<kaggle-user>/fly-racer-fruit-fly-connectome-drives-a-race-car`, built from [tools/kaggle/train_notebook.py](tools/kaggle/train_notebook.py), and starts a run. Add `--private` to keep the notebook private. Kaggle stops a session after 12 hours, so training saves `resume.pt` at 11 hours. Continue the run with `--resume runs/<name>`, which uploads the run folder as the private dataset `<kaggle-user>/fly-racer-runs`.
 
 Runs on Kaggle's GPU T4 x2 (4 vCPUs). The default 1.5M decisions take about 3.2 hours.
 

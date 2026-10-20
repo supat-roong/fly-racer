@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Fly-Racer: a fruit fly brain learns to drive
+# # Fly-Racer: Fruit Fly Connectome Drives a Race Car
 #
 # This notebook trains a policy wired like a real fly's nervous system (MaleCNS v1.0 connectome)
 # to drive Gymnasium `CarRacing-v3` with PPO. Code: https://github.com/supat-roong/fly-racer

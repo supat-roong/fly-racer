@@ -8,7 +8,7 @@ code from GitHub at the current commit, so push your commits first. The
 connectome is not public (neuPrint needs a login): data/tier_s.npz goes to your
 private dataset <user>/fly-racer-connectome, uploaded once. With --resume, the
 run folder (resume.pt and logs) goes to the private dataset <user>/fly-racer-runs.
-Download the result with `kaggle kernels output <user>/fly-racer-train -p runs/kaggle`.
+Download the result with `kaggle kernels output <user>/fly-racer-fruit-fly-connectome-drives-a-race-car -p runs/kaggle`.
 Needs the kaggle CLI (pip install kaggle, or set KAGGLE_CLI="uvx kaggle") and a
 token in ~/.kaggle.
 """
@@ -29,6 +29,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 NOTEBOOK = Path(__file__).with_name("train_notebook.py")
+TITLE = "Fly-Racer: Fruit Fly Connectome Drives a Race Car"
+SLUG = "fly-racer-fruit-fly-connectome-drives-a-race-car"  # Kaggle derives the URL from the title
 
 
 def kaggle(*args: str) -> str:
@@ -130,15 +132,15 @@ def main():
             code = set_setting(code, name, value)
         kdir = tmp / "kernel"
         kdir.mkdir()
-        (kdir / "fly-racer-train.ipynb").write_text(json.dumps(to_ipynb(code), indent=1))
+        (kdir / f"{SLUG}.ipynb").write_text(json.dumps(to_ipynb(code), indent=1))
         (kdir / "kernel-metadata.json").write_text(json.dumps({
-            "id": f"{a.user}/fly-racer-train", "title": "fly-racer-train", "code_file": "fly-racer-train.ipynb",
+            "id": f"{a.user}/{SLUG}", "title": TITLE, "code_file": f"{SLUG}.ipynb",
             "language": "python", "kernel_type": "notebook", "is_private": a.private, "enable_gpu": True,
             "enable_internet": True, "dataset_sources": sources,
             "machine_shape": {"T4": "NvidiaTeslaT4", "P100": "NvidiaTeslaP100"}[a.gpu],
         }))
         kaggle("kernels", "push", "-p", str(kdir))
-    print(f"progress: https://www.kaggle.com/code/{a.user}/fly-racer-train")
+    print(f"progress: https://www.kaggle.com/code/{a.user}/{SLUG}")
 
 
 if __name__ == "__main__":
