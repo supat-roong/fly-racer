@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[2]
 NOTEBOOK = Path(__file__).with_name("train_notebook.py")
 TITLE = "Fly-Racer: Fruit Fly Connectome Drives a Race Car"
 SLUG = "fly-racer-fruit-fly-connectome-drives-a-race-car"  # Kaggle derives the URL from the title
+KEYWORDS = ["neuroscience", "biology", "reinforcement learning", "deep learning", "pytorch", "games"]  # existing Kaggle tags
 
 
 def kaggle(*args: str) -> str:
@@ -136,7 +137,7 @@ def main():
         (kdir / "kernel-metadata.json").write_text(json.dumps({
             "id": f"{a.user}/{SLUG}", "title": TITLE, "code_file": f"{SLUG}.ipynb",
             "language": "python", "kernel_type": "notebook", "is_private": a.private, "enable_gpu": True,
-            "enable_internet": True, "dataset_sources": sources,
+            "enable_internet": True, "dataset_sources": sources, "keywords": KEYWORDS,
             "machine_shape": {"T4": "NvidiaTeslaT4", "P100": "NvidiaTeslaP100"}[a.gpu],
         }))
         kaggle("kernels", "push", "-p", str(kdir))
