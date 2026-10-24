@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[2]
 NOTEBOOK = Path(__file__).with_name("train_notebook.py")
 TITLE = "Fly-Racer: Fruit Fly Connectome Drives a Race Car"
 SLUG = "fly-racer-fruit-fly-connectome-drives-a-race-car"  # Kaggle derives the URL from the title
-KEYWORDS = ["neuroscience", "biology", "reinforcement learning", "deep learning", "pytorch", "games"]  # existing Kaggle tags
+KEYWORDS = ["neuroscience", "biology", "reinforcement learning", "pytorch", "simulations"]  # Kaggle allows at most 5 tags
 
 
 def kaggle(*args: str) -> str:
