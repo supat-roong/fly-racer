@@ -111,7 +111,25 @@ The first push uploads `data/tier_s.npz` to your private dataset `<kaggle-user>/
 
 Runs on Kaggle's GPU T4 x2 (4 vCPUs). The default 1.5M decisions take about 3.2 hours.
 
-The Kaggle run `fly` seed 1 scored 888.8 +/- 26.4 on 100 held-out tracks (median 888.9, worst 744.4, 30 at 900+).
+The demo notebook's `fly` seed 1 run scored 885.0 +/- 43.1 on 100 held-out tracks (worst 723.5, best 933.5). Its `best.pt` is published below.
+
+## Pretrained weights
+
+[weights/fly-1.pt](weights/fly-1.pt) is the `best.pt` from the demo notebook's Kaggle run (`fly` core, seed 1, step 1,459,200). It scores 885.0 +/- 43.1 on 100 held-out tracks (`--seed 30000`). It is stored with [Git LFS](https://git-lfs.com), so fetch it after cloning:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+The file holds only the learned weights. The connectome wiring (which neurons connect, their signs, and the input and output neurons) is stripped, so the connectome is not redistributed. Loading rebuilds the wiring from your own `data/tier_s.npz` ([Get the connectome](#get-the-connectome-tier-s)), and fails if that file is not the connectome it was trained on:
+
+```bash
+.venv/bin/python -m flyracer.evaluate weights/fly-1.pt --episodes 100 --seed 30000
+.venv/bin/python -m flyracer.watch --ckpt weights/fly-1.pt --live
+```
+
+To share your own run the same way: `.venv/bin/python -m flyracer.checkpoint strip runs/fly-1/best.pt weights/my-run.pt`.
 
 ## Evaluate
 
@@ -174,4 +192,4 @@ CarRacing counts as solved at an average of 900 over 100 episodes; only `fly` cl
 
 ## License
 
-The code is released under the [MIT License](LICENSE). The MaleCNS connectome is not included in this repository; it is downloaded from neuPrint and remains under its providers' terms.
+The code is released under the [MIT License](LICENSE). The MaleCNS connectome is not included in this repository, not even inside the published weights; it is downloaded from neuPrint and remains under its providers' terms.
